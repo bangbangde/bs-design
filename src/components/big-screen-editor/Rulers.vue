@@ -1,8 +1,8 @@
 <template>
   <div class="rulers">
     <div class="corner"></div>
-    <div class="ruler-x"><canvas ref="canvasX"></canvas></div>
-    <div class="ruler-y"><canvas ref="canvasY"></canvas></div>
+    <div class="ruler-x"><canvas ref="canvasX" :width="width" :height="rulerHeight"></canvas></div>
+    <div class="ruler-y"><canvas ref="canvasY" :width="rulerHeight" :height="height"></canvas></div>
     <div class="content-wrapper">
       <slot></slot>
     </div>
@@ -10,8 +10,69 @@
 </template>
 
 <script>
+const dpr = window.devicePixelRatio || 1;
+
+function drawTicks(ctx) {
+  const w = ctx.canvas.width;
+  const h = ctx.canvas.height;
+  const h2 = 5*dpr;
+  const tickDistance = 10*dpr;
+  const fontSize = 20;
+  const tickSpace = 200;
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.strokeStyle = '#fff'; // '#a6a7a9';
+  ctx.fillStyle = '#fff'; // '#a6a7a9';
+  ctx.font = `${fontSize}px serif`;
+  for (let i = 0; i < 10; i++) {
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(0, h);
+    ctx.stroke();
+    ctx.fillText("100", 2, fontSize);
+    ctx.save();
+    for (let j = 0; j < 10; j++) {
+      ctx.translate(tickDistance, 0);
+      ctx.beginPath();
+      ctx.moveTo(0, h - h2);
+      ctx.lineTo(0, h);
+      ctx.stroke();
+    }
+    ctx.translate(tickDistance, 0);
+  }
+  ctx.restore();
+}
+
 export default {
-  name: 'Rulers'
+  name: 'Rulers',
+  data: () => ({
+    width: '0',
+    height: '0',
+    rulerHeight: 15*dpr
+  }),
+  created() {
+    this.handleResize = this.handleResize.bind(this);
+  },
+  mounted() {
+    this.ctxX = this.$refs.canvasX.getContext("2d");
+    this.ctxY = this.$refs.canvasY.getContext("2d");
+    window.addEventListener('resize', this.handleResize);
+    this.handleResize();
+  },
+  beforeDestroy() {
+    window.removeEventListener('resize', this.handleResize);
+  },
+  methods: {
+    handleResize() {
+      console.log({dpr});
+      this.width = this.$refs.canvasX.getBoundingClientRect().width * dpr;
+      this.height = this.$refs.canvasY.getBoundingClientRect().height * dpr;
+      this.$nextTick(() => {
+        drawTicks(this.ctxX);
+      })
+    }
+  }
 }
 </script>
 
@@ -40,6 +101,7 @@ export default {
     position: absolute;
 
     canvas {
+      display: block;
       width: 100%;
       height: 100%;
       background: #222429;
@@ -50,7 +112,6 @@ export default {
     right: 0;
     top: 0;
     height: var(--size);
-    width: 100%;
   }
   .ruler-y {
     left: 0;
